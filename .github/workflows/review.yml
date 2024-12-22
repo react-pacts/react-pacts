@@ -1,0 +1,33 @@
+# yaml-language-server: $schema=./_schema.json
+
+name: Review
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+
+env:
+  # General Options
+  name: '{{name}}'
+  node: '{{node}}'
+  debug: false
+  # Skip
+  skip-tests: false
+  # Timeouts (in minutes)
+  timeout-setup: 10
+  # Environment Variables
+  CI: true
+  CI_DEBUG: ${{ vars.CI_DEBUG }}
+  CI_PR_TIMEOUT_SETUP: ${{ vars.CI_PR_TIMEOUT_SETUP }}
+  CI_PR_TIMEOUT_TESTS: ${{ vars.CI_PR_TIMEOUT_TESTS }}
+  DEBUG: ${{ vars.DEBUG }}
+  NODE_ENV: production
+  NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+jobs:
+  test:
+    name: TEST
+    if: github.repository.archived != true
+    uses: ./.github/workflows/test.yml
+    with:
+      dist: dist

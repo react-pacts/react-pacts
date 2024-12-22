@@ -1,0 +1,98 @@
+# yaml-language-server: $schema=./_schema.json
+
+name: Test
+
+on:
+  workflow_call:
+    inputs:
+      node:
+        description: The version of Node.js used
+        default: '{{node}}'
+        required: false
+        type: string
+      skip:
+        description: Skip jobs
+        default: false
+        required: false
+        type: boolean
+      debug:
+        description: Debug jobs
+        default: false
+        required: false
+        type: boolean
+
+env:
+  # Skip
+  skip-unit: false
+  # Timeouts (in minutes)
+  timeout-setup: 10
+  timeout-tests: 30
+  # Environment Variables
+  CI: true
+  CI_DEBUG: ${{ secrets.CI_SKIP_UNIT_TESTS }}
+  CI_SKIP_UNIT_TESTS: ${{ secrets.CI_SKIP_UNIT_TESTS }}
+  NODE_ENV: production
+  NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+jobs:
+  unit:
+    name: Unit
+    if: github.repository.archived != true
+    runs-on: ubuntu-latest
+    container:
+      image: node:${{ inputs.node }}
+    steps:
+      - name: Init
+        id: init
+        run: |
+          echo "__SKIP=${{ env.CI_SKIP_UNIT_TESTS || fromJSON(env.skip-unit) || fromJSON(inputs.skip) }}" >> $GITHUB_ENV
+          echo "__DEBUG=${{ env.CI_DEBUG || fromJSON(inputs.debug) }}" >> $GITHUB_ENV
+
+      - name: Debug
+        id: debug
+        if: >-
+          fromJSON(env.__DEBUG) == true &&
+          fromJSON(env.__SKIP) != true
+        run: |
+          echo "RUNNER_DEBUG=${{ fromJSON(env.__DEBUG) }}" >> $GITHUB_ENV
+          echo "ACTIONS_RUNNER_DEBUG=${{ fromJSON(env.__DEBUG) }}" >> $GITHUB_ENV
+          echo "ACTIONS_STEP_DEBUG=${{ fromJSON(env.__DEBUG) }}" >> $GITHUB_ENV
+          echo "APP_DEBUG=${{ fromJSON(env.__DEBUG) }}" >> $GITHUB_ENV
+
+      - name: Checkout
+        id: clone
+        uses: actions/checkout@v3
+        timeout-minutes: ${{ fromJSON(env.timeout-setup) }}
+        if: fromJSON(env.__SKIP) != true
+
+      - name: Dependencies
+        id: setup
+        timeout-minutes: ${{ fromJSON(env.timeout-setup) }}
+        if: fromJSON(env.__SKIP) != true
+        env:
+          # 'development' is required instead of 'production' here so that NPM includes devDependencies (like Jest).
+          NODE_ENV: development
+        run: npm ci --legacy-peer-deps --ignore-scripts
+
+      - name: Cache
+        id: cache
+        uses: actions/cache@v3
+        timeout-minutes: ${{ fromJSON(env.timeout-setup) }}
+        if: fromJSON(env.__SKIP) != true
+        env:
+          cache-name: jest-cache
+        with:
+          path: test/jest/.cache
+          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+
+      - name: CPU
+        id: cpu
+        timeout-minutes: ${{ fromJSON(env.timeout-setup) }}
+        if: fromJSON(env.__SKIP) != true
+        uses: SimenB/github-actions-cpu-cores@v1
+
+      - name: Test
+        id: test
+        timeout-minutes: ${{ fromJSON(env.timeout-tests) }}
+        if: fromJSON(env.__SKIP) != true
+        run: npm test -- --coverage --silent --watchAll=false --maxWorkers=${{ steps.cpu.outputs.count }}

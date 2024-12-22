@@ -1,0 +1,34 @@
+# yaml-language-server: $schema=./_schema.json
+
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+      - beta
+      - alpha
+      - '*.X.X'
+      - '*'
+
+jobs:
+  build:
+    name: BUILD
+    if: github.repository.archived != true
+    secrets:
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+    uses: ./.github/workflows/build.yml
+    with:
+      dist: 'dist'
+      node: '20'
+
+  publish:
+    name: PUBLISH
+    needs: [build]
+    if: github.repository.archived != true
+    secrets:
+      GH_TOKEN: ${{ secrets.GH_TOKEN }}
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+    uses: ./.github/workflows/publish.yml
+    with:
+      dist: 'dist'

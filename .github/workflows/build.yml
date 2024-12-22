@@ -1,0 +1,102 @@
+# yaml-language-server: $schema=./_schema.json
+
+name: Build
+
+on:
+  workflow_call:
+    secrets:
+      NPM_TOKEN:
+        description: 'A token used for authorized access to NPM'
+        required: true
+    inputs:
+      dist:
+        description: The directory where the package will be built
+        default: dist
+        required: false
+        type: string
+      node:
+        description: The version of Node.js used
+        default: '{{node}}'
+        required: false
+        type: string
+      skip:
+        description: Skip jobs
+        default: false
+        required: false
+        type: boolean
+      debug:
+        description: Debug jobs
+        default: false
+        required: false
+        type: boolean
+
+permissions:
+  contents: read
+
+env:
+  # Timeouts (in minutes)
+  timeout-setup: 10
+  timeout-build: 60
+  # Environment Variables
+  CI: true
+  CI_TIMEOUT_SETUP: ${{ vars.CI_TIMEOUT_SETUP }}
+  CI_TIMEOUT_BUILD: ${{ vars.CI_TIMEOUT_BUILD }}
+  NODE_ENV: production
+
+jobs:
+  build:
+    name: Build
+    if: github.repository.archived != true
+    runs-on: ubuntu-latest
+    container:
+      image: node:${{ inputs.node }}
+    steps:
+      - name: Init
+        id: init
+        run: |
+          echo "__SKIP=${{ inputs.skip }}" >> $GITHUB_ENV
+          echo "__DEBUG=${{ env.CI_DEBUG || env.debug || inputs.debug }}" >> $GITHUB_ENV
+          echo "__TIMEOUT_SETUP=${{ env.CI_TIMEOUT_SETUP || fromJSON(env.timeout-setup) }}" >> $GITHUB_ENV
+          echo "__TIMEOUT_BUILD=${{ env.CI_TIMEOUT_BUILD || fromJSON(env.timeout-build) }}" >> $GITHUB_ENV
+
+      - name: Debug
+        id: debug
+        if: >-
+          fromJSON(env.__DEBUG) == true &&
+          fromJSON(env.__SKIP) != true
+        run: |
+          echo "RUNNER_DEBUG=${{ fromJSON(env.__DEBUG) }}" >> $GITHUB_ENV
+          echo "ACTIONS_RUNNER_DEBUG=${{ fromJSON(env.__DEBUG) }}" >> $GITHUB_ENV
+          echo "ACTIONS_STEP_DEBUG=${{ fromJSON(env.__DEBUG) }}" >> $GITHUB_ENV
+          echo "DEBUG=${{ fromJSON(env.__DEBUG) }}" >> $GITHUB_ENV
+
+      - name: Checkout
+        id: clone
+        uses: actions/checkout@v3
+        timeout-minutes: ${{ fromJSON(env.__TIMEOUT_SETUP) }}
+        if: fromJSON(env.__SKIP) != true
+
+      - name: Dependencies
+        id: setup
+        timeout-minutes: ${{ fromJSON(env.__TIMEOUT_SETUP) }}
+        if: fromJSON(env.__SKIP) != true
+        env:
+          # 'development' is required instead of 'production' here so that NPM includes devDependencies (like Rollup).
+          NODE_ENV: development
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm ci --legacy-peer-deps --ignore-scripts
+
+      - name: Build
+        id: build
+        timeout-minutes: ${{ fromJSON(env.__TIMEOUT_BUILD) }}
+        if: fromJSON(env.__SKIP) != true
+        run: npm run build
+
+      - name: Cache
+        id: cache
+        timeout-minutes: ${{ fromJSON(env.__TIMEOUT_BUILD) }}
+        if: fromJSON(env.__SKIP) != true
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-artifacts
+          path: ${{ inputs.dist }}

@@ -1,0 +1,113 @@
+{
+	"name": "@{{scope}}/{{name}}",
+	"version": "0.0.1",
+	"description": "{{description}}",
+	"author": "Robert H. Hameetman (https://www.robhameetman.com/)",
+	"homepage": "https://www.npmjs.org/package/@{{scope}}/{{name}}",
+	"license": "MIT",
+	"private": true,
+	"main": "dist/index.min.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/{{org}}/{{repo}}"
+	},
+	"bugs": {
+		"url": "https://github.com/{{org}}/{{repo}}/issues"
+	},
+	"engines": {
+		"node": ">={{nodejs}}",
+		"npm": ">={{npmjs}}"
+	},
+	"scripts": {
+		"build": "rm -rf ./dist/ && rollup -c ./config/rollup.config.js",
+		"format": "NODE_ENV=production eslint ./src --ext=ts",
+		"prepare": "husky install",
+		"reset": "rm -rf node_modules/ && npm cache clear --force && [[ -f package-lock.json ]] && npm ci || npm i",
+		"setup": "sh scripts/setup.sh",
+		"test": "NODE_ENV=test jest --maxWorkers=50%"
+	},
+	"publishConfig": {
+		"registry": "https://registry.npmjs.org/",
+		"tag": "latest"
+	},
+	"dependencies": {},
+	"devDependencies": {},
+	"eslintConfig": {
+		"extends": "@rob.hameetman",
+		"ignorePatterns": [
+			"tailwind.config.js",
+			"webpack.config.js",
+			"src/forecast/types/SevenDayForecast",
+			"typings/"
+		],
+		"rules": {
+			"sort-keys": "off",
+			"sort-imports": "off",
+			"import/no-unresolved": "off"
+		},
+		"overrides": [
+			{
+				"files": [
+					"**/test/**",
+					"**/__test__/**",
+					"*.spec.ts?(x)"
+				],
+				"rules": {
+					"no-proto": "off",
+					"@typescript-eslint/no-empty-function": "off",
+					"import/no-extraneous-dependencies": "off"
+				}
+			}
+		]
+	},
+	"prettier": {
+		"arrowParens": "always",
+		"semi": true,
+		"trailingComma": "all",
+		"singleQuote": true,
+		"printWidth": 80,
+		"tabWidth": 2,
+		"useTabs": true,
+		"endOfLine": "auto"
+	},
+	"jest": {
+		"roots": [
+			"<rootDir>/src"
+		],
+		"collectCoverageFrom": [
+			"src/**/*.ts",
+			"!src/**/*.d.ts"
+		],
+		"coverageReporters": [
+			"text-summary"
+		],
+		"moduleFileExtensions": [
+			"js",
+			"ts",
+			"json"
+		],
+		"moduleNameMapper": {
+			"^@app/(.*)$": "<rootDir>/src/$1",
+			"^@test/(.*)$": "<rootDir>/test/resources/$1"
+		},
+		"preset": "ts-jest",
+		"reporters": [
+			"default"
+		],
+		"setupFilesAfterEnv": [
+			"<rootDir>/test/jest/config/setupTests.ts"
+		],
+		"testMatch": [
+			"<rootDir>/src/**/*.spec.ts"
+		],
+		"transform": {
+			"\\.ts?(x)$": "ts-jest",
+			"^(?!.*\\.(ts|json)$)": "ts-jest"
+		}
+	},
+  "release": {
+    "extends": "@rob.hameetman/semantic-release-config/recommended"
+  }
+}

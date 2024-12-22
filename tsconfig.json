@@ -1,0 +1,31 @@
+{
+  "compilerOptions": {
+		"strict": true,
+		"allowJs": false,
+		"allowSyntheticDefaultImports": true,
+		"baseUrl": ".",
+		"rootDir": ".",
+		"declaration": true,
+		"declarationDir": "./dist",
+		"esModuleInterop": true,
+		"experimentalDecorators": true,
+		"forceConsistentCasingInFileNames": true,
+		"moduleResolution": "node",
+		"noImplicitAny": true,
+		"noImplicitThis": true,
+		"outDir": "./dist",
+		"paths": {
+			"@lib/*": ["./lib/*"],
+			"@test/*": ["./test/resources/*"]
+		},
+		"resolveJsonModule": true,
+  },
+  "files": ["./lib/index.ts"],
+	"include": [
+		"./lib",
+		"./typings",
+	],
+	"exclude": [
+		"./node_modules"
+	],
+}
